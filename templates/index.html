@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Comparison Tool</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .upload-container {
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+        .upload-container:hover {
+            border-color: #007bff;
+            background-color: #f8f9fa;
+        }
+        .file-input {
+            display: none;
+        }
+        .flash-message {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center mb-4">PDF Comparison Tool</h1>
+        <p class="text-center mb-4">Upload two PDF documents and select specific pages to compare</p>
+        
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category if category != 'error' else 'danger' }} alert-dismissible fade show flash-message" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <form action="{{ url_for('upload_files') }}" method="post">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header bg-primary text-white">
+                            First Text Input
+                        </div>
+                        <div class="card-body">
+                            <textarea name="text1" id="text1" class="form-control" rows="12" placeholder="Paste or type the first text here..." required></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header bg-success text-white">
+                            Second Text Input
+                        </div>
+                        <div class="card-body">
+                            <textarea name="text2" id="text2" class="form-control" rows="12" placeholder="Paste or type the second text here..." required></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="text-center mt-4">
+                <button type="submit" class="btn btn-primary btn-lg">Compare Texts</button>
+            </div>
+        </form>
+        
+        <div class="mt-5 text-center">
+            <h4>How It Works</h4>
+            <div class="row mt-4">
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">1. Upload PDFs</h5>
+                            <p class="card-text">Upload two PDF documents that you want to compare.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">2. Select Pages</h5>
+                            <p class="card-text">Choose specific pages from each document to compare.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">3. View Differences</h5>
+                            <p class="card-text">See highlighted differences between the selected pages.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Handle file selection for first PDF
+            const uploadContainer1 = document.getElementById('upload-container-1');
+            const fileInput1 = document.getElementById('pdf1');
+            const fileName1 = document.getElementById('file-name-1');
+            
+            uploadContainer1.addEventListener('click', function() {
+                fileInput1.click();
+            });
+            
+            fileInput1.addEventListener('change', function() {
+                if (this.files.length > 0) {
+                    fileName1.textContent = this.files[0].name;
+                }
+            });
+            
+            // Handle drag and drop for first PDF
+            uploadContainer1.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                this.style.borderColor = '#007bff';
+                this.style.backgroundColor = '#f8f9fa';
+            });
+            
+            uploadContainer1.addEventListener('dragleave', function() {
+                this.style.borderColor = '#ccc';
+                this.style.backgroundColor = '';
+            });
+            
+            uploadContainer1.addEventListener('drop', function(e) {
+                e.preventDefault();
+                this.style.borderColor = '#ccc';
+                this.style.backgroundColor = '';
+                
+                if (e.dataTransfer.files.length > 0) {
+                    const file = e.dataTransfer.files[0];
+                    if (file.type === 'application/pdf') {
+                        fileInput1.files = e.dataTransfer.files;
+                        fileName1.textContent = file.name;
+                    } else {
+                        alert('Please upload a PDF file');
+                    }
+                }
+            });
+            
+            // Handle file selection for second PDF
+            const uploadContainer2 = document.getElementById('upload-container-2');
+            const fileInput2 = document.getElementById('pdf2');
+            const fileName2 = document.getElementById('file-name-2');
+            
+            uploadContainer2.addEventListener('click', function() {
+                fileInput2.click();
+            });
+            
+            fileInput2.addEventListener('change', function() {
+                if (this.files.length > 0) {
+                    fileName2.textContent = this.files[0].name;
+                }
+            });
+            
+            // Handle drag and drop for second PDF
+            uploadContainer2.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                this.style.borderColor = '#28a745';
+                this.style.backgroundColor = '#f8f9fa';
+            });
+            
+            uploadContainer2.addEventListener('dragleave', function() {
+                this.style.borderColor = '#ccc';
+                this.style.backgroundColor = '';
+            });
+            
+            uploadContainer2.addEventListener('drop', function(e) {
+                e.preventDefault();
+                this.style.borderColor = '#ccc';
+                this.style.backgroundColor = '';
+                
+                if (e.dataTransfer.files.length > 0) {
+                    const file = e.dataTransfer.files[0];
+                    if (file.type === 'application/pdf') {
+                        fileInput2.files = e.dataTransfer.files;
+                        fileName2.textContent = file.name;
+                    } else {
+                        alert('Please upload a PDF file');
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>

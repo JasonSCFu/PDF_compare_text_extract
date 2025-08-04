@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Comparison Results</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .pdf-container {
+            width: 100%;
+            height: 800px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        .pdf-viewer {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center mb-4">Text Comparison Results</h1>
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category if category != 'error' else 'danger' }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white">Comparison Details</div>
+            <div class="card-body">
+                <div class="mb-3">
+                    {{ comparison_result|safe }}
+                </div>
+                <h5 class="mb-3">Highlighting Legend</h5>
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="d-flex align-items-center">
+                            <div style="width: 20px; height: 20px; background-color: rgba(255, 0, 0, 0.3); margin-right: 10px;"></div>
+                            <span>Content only in the first text</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="d-flex align-items-center">
+                            <div style="width: 20px; height: 20px; background-color: rgba(0, 255, 0, 0.3); margin-right: 10px;"></div>
+                            <span>Content only in the second text</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="d-flex align-items-center">
+                            <div style="width: 20px; height: 20px; background-color: rgba(0, 0, 255, 0.2); margin-right: 10px;"></div>
+                            <span>Italic text {% if specific_words %}(only words: {{ specific_words }}){% endif %}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="text-center mb-4">
+            <a href="{{ url_for('index') }}" class="btn btn-primary btn-lg ms-2">
+                Compare New Texts
+            </a>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
