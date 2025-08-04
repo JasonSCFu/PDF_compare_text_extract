@@ -1,10 +1,8 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, send_file, session
+from flask import Flask, render_template, request, redirect, url_for, flash, session
 import os
 import fitz
-from datetime import datetime
 from werkzeug.utils import secure_filename
-import shutil
-import sys
+import difflib
 import tempfile
 
 # Import the compare_pdfs function from pdf_compare.py
@@ -14,12 +12,10 @@ from pdf_compare import compare_pdfs, is_italic_font
 app = Flask(__name__)
 app.secret_key = 'pdf_comparison_secret_key'
 app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
-app.config['RESULT_FOLDER'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'results')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
 # Create folders if they don't exist
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-os.makedirs(app.config['RESULT_FOLDER'], exist_ok=True)
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() == 'pdf'
@@ -225,24 +221,6 @@ def compare():
     # For non-AJAX, render the same in result.html
     return render_template('result.html', comparison_result=compare_html)
 
-
-@app.route('/results/<filename>')
-def view_result(filename):
-    result_path = os.path.join(app.config['RESULT_FOLDER'], filename)
-    if not os.path.exists(result_path):
-        flash('Result file not found', 'error')
-        return redirect(url_for('index'))
-    
-    return send_file(result_path, as_attachment=False)
-
-@app.route('/download/<filename>')
-def download_result(filename):
-    result_path = os.path.join(app.config['RESULT_FOLDER'], filename)
-    if not os.path.exists(result_path):
-        flash('Result file not found', 'error')
-        return redirect(url_for('index'))
-    
-    return send_file(result_path, as_attachment=True)
 
 if __name__ == '__main__':
     app.run(debug=True)
