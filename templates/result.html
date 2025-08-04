@@ -39,27 +39,8 @@
                 <div class="mb-3">
                     {{ comparison_result|safe }}
                 </div>
-                <h5 class="mb-3">Highlighting Legend</h5>
-                <div class="row">
-                    <div class="col-md-4">
-                        <div class="d-flex align-items-center">
-                            <div style="width: 20px; height: 20px; background-color: rgba(255, 0, 0, 0.3); margin-right: 10px;"></div>
-                            <span>Content only in the first text</span>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="d-flex align-items-center">
-                            <div style="width: 20px; height: 20px; background-color: rgba(0, 255, 0, 0.3); margin-right: 10px;"></div>
-                            <span>Content only in the second text</span>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="d-flex align-items-center">
-                            <div style="width: 20px; height: 20px; background-color: rgba(0, 0, 255, 0.2); margin-right: 10px;"></div>
-                            <span>Italic text {% if specific_words %}(only words: {{ specific_words }}){% endif %}</span>
-                        </div>
-                    </div>
-                </div>
+
+                <div class="text-center mb-4"><a href="/" class="btn btn-secondary">New Comparison</a></div>
             </div>
         </div>
         <div class="text-center mb-4">
