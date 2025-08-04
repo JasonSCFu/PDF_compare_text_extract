@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 import os
+import sys
 import fitz
 from werkzeug.utils import secure_filename
 import difflib
@@ -49,26 +50,51 @@ def upload_files():
         # Import the highlight_text_diff function
         import difflib
         
+        def normalize_whitespace(text):
+            # Replace all whitespace sequences with a single space and strip leading/trailing spaces
+            return ' '.join(text.split())
+
         def highlight_text_diff(a, b, color):
-            matcher = difflib.SequenceMatcher(None, a.split(), b.split())
+            # Normalize whitespace in input strings
+            a_normalized = normalize_whitespace(a)
+            b_normalized = normalize_whitespace(b)
+            
+            # Split into words for comparison
+            a_words = a_normalized.split()
+            b_words = b_normalized.split()
+            
+            # Create a matcher that ignores whitespace
+            matcher = difflib.SequenceMatcher(lambda x: x == ' ', a_words, b_words, autojunk=False)
+            
+            # For the original text (to preserve formatting in display)
+            a_original = a.split()
+            b_original = b.split()
+            
             result = []
+            
+            # Process each opcode from the matcher
             for opcode, i1, i2, j1, j2 in matcher.get_opcodes():
                 if opcode == 'equal':
-                    words = a.split()[i1:i2] if color == 'red' else b.split()[j1:j2]
+                    # For equal parts, use the original text (not normalized)
+                    words = a_original[i1:i2] if color == 'red' else b_original[j1:j2]
                     result.extend(words)
                 elif opcode == 'delete' and color == 'red':
-                    for word in a.split()[i1:i2]:
+                    # Highlight deletions in red
+                    for word in a_original[i1:i2]:
                         result.append(f'<span style="background:#f8d7da;color:#721c24;">{word}</span>')
                 elif opcode == 'insert' and color == 'green':
-                    for word in b.split()[j1:j2]:
+                    # Highlight insertions in green
+                    for word in b_original[j1:j2]:
                         result.append(f'<span style="background:#d4edda;color:#155724;">{word}</span>')
                 elif opcode == 'replace':
                     if color == 'red':
-                        for word in a.split()[i1:i2]:
+                        for word in a_original[i1:i2]:
                             result.append(f'<span style="background:#f8d7da;color:#721c24;">{word}</span>')
                     elif color == 'green':
-                        for word in b.split()[j1:j2]:
+                        for word in b_original[j1:j2]:
                             result.append(f'<span style="background:#d4edda;color:#155724;">{word}</span>')
+            
+            # Join with a single space to ensure consistent spacing in the output
             return ' '.join(result)
 
         lines1 = text1.splitlines()
