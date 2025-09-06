@@ -51,8 +51,24 @@ def upload_files():
         import difflib
         
         def normalize_whitespace(text):
-            # Replace all whitespace sequences with a single space and strip leading/trailing spaces
-            return ' '.join(text.split())
+            # Remove backspace characters and normalize all whitespace (spaces, tabs, newlines, etc.)
+            import re
+            text_no_backspace = text.replace('\b', '').replace('\x08', '')
+            # Replace all whitespace sequences (spaces, tabs, newlines, etc.) with a single space
+            # and strip leading/trailing whitespace
+            normalized = re.sub(r'\s+', ' ', text_no_backspace).strip()
+            return normalized
+        
+        def filter_empty_lines(lines):
+            # Remove empty lines and lines with only whitespace
+            import re
+            filtered_lines = []
+            for line in lines:
+                # Remove backspace characters first, then check if line has content
+                cleaned_line = line.replace('\b', '').replace('\x08', '')
+                if re.sub(r'\s+', '', cleaned_line):  # If line has non-whitespace content
+                    filtered_lines.append(line)
+            return filtered_lines
 
         def highlight_text_diff(a, b, color):
             # Normalize whitespace in input strings
@@ -97,8 +113,8 @@ def upload_files():
             # Join with a single space to ensure consistent spacing in the output
             return ' '.join(result)
 
-        lines1 = text1.splitlines()
-        lines2 = text2.splitlines()
+        lines1 = filter_empty_lines(text1.splitlines())
+        lines2 = filter_empty_lines(text2.splitlines())
         max_lines = max(len(lines1), len(lines2))
         highlighted1 = []
         highlighted2 = []
@@ -164,8 +180,32 @@ def compare():
 
     # --- Highlight differences in the original texts ---
     import difflib
+    
+    def normalize_text_for_comparison(text):
+        # Remove backspace characters and normalize all whitespace for comparison
+        import re
+        text_no_backspace = text.replace('\b', '').replace('\x08', '')
+        # Replace all whitespace sequences (spaces, tabs, newlines, etc.) with a single space
+        # and strip leading/trailing whitespace
+        normalized = re.sub(r'\s+', ' ', text_no_backspace).strip()
+        return normalized
+    
+    def filter_empty_lines(lines):
+        # Remove empty lines and lines with only whitespace
+        import re
+        filtered_lines = []
+        for line in lines:
+            # Remove backspace characters first, then check if line has content
+            cleaned_line = line.replace('\b', '').replace('\x08', '')
+            if re.sub(r'\s+', '', cleaned_line):  # If line has non-whitespace content
+                filtered_lines.append(line)
+        return filtered_lines
+    
     def highlight_text_diff(a, b, color):
-        matcher = difflib.SequenceMatcher(None, a.split(), b.split())
+        # Normalize text for comparison
+        a_normalized = normalize_text_for_comparison(a)
+        b_normalized = normalize_text_for_comparison(b)
+        matcher = difflib.SequenceMatcher(None, a_normalized.split(), b_normalized.split())
         result = []
         for opcode, i1, i2, j1, j2 in matcher.get_opcodes():
             if opcode == 'equal':
@@ -191,8 +231,8 @@ def compare():
                         result.append(f'<span style="background:#d4edda;color:#155724;">{word}</span>')
         return ' '.join(result)
 
-    lines1 = text1.splitlines()
-    lines2 = text2.splitlines()
+    lines1 = filter_empty_lines(text1.splitlines())
+    lines2 = filter_empty_lines(text2.splitlines())
     max_lines = max(len(lines1), len(lines2))
     highlighted1 = []
     highlighted2 = []
