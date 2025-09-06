@@ -88,6 +88,9 @@
         const buttonText = document.getElementById('button-text');
         const buttonSpinner = document.getElementById('button-spinner');
         
+        // Store current comparison data for saving
+        let currentComparisonData = null;
+        
         // Function to handle form submission
         async function handleSubmit(e) {
             e.preventDefault();
@@ -123,6 +126,13 @@
                 // Update the result div with the HTML from the response
                 if (data.status === 'success') {
                     resultDiv.innerHTML = data.html;
+                    
+                    // Store comparison data for potential saving
+                    currentComparisonData = data.comparison_data;
+                    
+                    // Update saved comparisons count
+                    updateSavedCount();
+                    
                     // Scroll to results
                     resultDiv.scrollIntoView({ behavior: 'smooth' });
                 } else {
@@ -146,15 +156,177 @@
         // Bind the event listener to the form
         form.onsubmit = handleSubmit;
         
-        // Handle new comparison button if it exists in the results
+        // Function to update saved comparisons count
+        async function updateSavedCount() {
+            try {
+                const response = await fetch('/get_saved_comparisons');
+                const data = await response.json();
+                const count = data.total_comparisons;
+                
+                document.querySelectorAll('#saved-count, #total-saved').forEach(el => {
+                    el.textContent = count;
+                });
+                
+                // Show/hide PDF generation button
+                const pdfBtn = document.getElementById('generate-pdf-btn');
+                if (pdfBtn) {
+                    pdfBtn.style.display = count > 0 ? 'inline-block' : 'none';
+                }
+                
+            } catch (error) {
+                console.error('Error updating saved count:', error);
+            }
+        }
+        
+        // Function to save current comparison
+        async function saveComparison() {
+            if (!currentComparisonData) {
+                alert('No comparison data to save');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/save_comparison', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        comparison_data: currentComparisonData
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    alert(data.message);
+                    updateSavedCount();
+                    
+                    // Disable save button to prevent duplicate saves
+                    const saveBtn = document.getElementById('save-comparison-btn');
+                    if (saveBtn) {
+                        saveBtn.disabled = true;
+                        saveBtn.textContent = 'Saved!';
+                    }
+                } else {
+                    alert('Error: ' + data.message);
+                }
+                
+            } catch (error) {
+                console.error('Error saving comparison:', error);
+                alert('Error saving comparison: ' + error.message);
+            }
+        }
+        
+        // Function to start next comparison
+        function nextComparison() {
+            resultDiv.innerHTML = '';
+            form.reset();
+            currentComparisonData = null;
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        
+        // Function to generate PDF
+        async function generatePDF() {
+            try {
+                const pdfBtn = document.getElementById('generate-pdf-btn');
+                if (pdfBtn) {
+                    pdfBtn.disabled = true;
+                    pdfBtn.textContent = 'Generating...';
+                }
+                
+                const response = await fetch('/generate_pdf', {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    // Trigger download
+                    window.location.href = data.download_url;
+                    alert('PDF generated successfully!');
+                } else {
+                    alert('Error generating PDF: ' + data.message);
+                }
+                
+            } catch (error) {
+                console.error('Error generating PDF:', error);
+                alert('Error generating PDF: ' + error.message);
+            } finally {
+                const pdfBtn = document.getElementById('generate-pdf-btn');
+                if (pdfBtn) {
+                    pdfBtn.disabled = false;
+                    pdfBtn.textContent = 'Generate PDF';
+                }
+            }
+        }
+        
+        // Function to clear all saved comparisons
+        async function clearAllComparisons() {
+            if (!confirm('Are you sure you want to clear all saved comparisons?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/clear_comparisons', {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    alert(data.message);
+                    updateSavedCount();
+                    
+                    // Hide saved info
+                    const savedInfo = document.getElementById('saved-comparisons-info');
+                    if (savedInfo) {
+                        savedInfo.style.display = 'none';
+                    }
+                } else {
+                    alert('Error: ' + data.message);
+                }
+                
+            } catch (error) {
+                console.error('Error clearing comparisons:', error);
+                alert('Error clearing comparisons: ' + error.message);
+            }
+        }
+        
+        // Function to toggle saved comparisons info
+        function toggleSavedInfo() {
+            const savedInfo = document.getElementById('saved-comparisons-info');
+            if (savedInfo) {
+                savedInfo.style.display = savedInfo.style.display === 'none' ? 'block' : 'none';
+            }
+        }
+        
+        // Event delegation for dynamically created buttons
         document.addEventListener('click', function(e) {
-            if (e.target && e.target.matches('a[href="/"]')) {
+            if (e.target && e.target.id === 'save-comparison-btn') {
                 e.preventDefault();
-                resultDiv.innerHTML = '';
-                form.reset();
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+                saveComparison();
+            } else if (e.target && e.target.id === 'next-comparison-btn') {
+                e.preventDefault();
+                nextComparison();
+            } else if (e.target && e.target.id === 'generate-pdf-btn') {
+                e.preventDefault();
+                generatePDF();
+            } else if (e.target && e.target.id === 'view-saved-btn') {
+                e.preventDefault();
+                toggleSavedInfo();
+            } else if (e.target && e.target.id === 'clear-all-btn') {
+                e.preventDefault();
+                clearAllComparisons();
+            } else if (e.target && e.target.matches('a[href="/"]')) {
+                // Legacy new comparison button
+                e.preventDefault();
+                nextComparison();
             }
         });
+        
+        // Initialize saved count on page load
+        updateSavedCount();
     });
     </script>
 </body>
