@@ -42,16 +42,6 @@ def upload_files():
             normalized = re.sub(r'\s+', ' ', text_no_slash).strip()
             return normalized
         
-        def filter_empty_lines(lines):
-            # Remove empty lines and lines with only whitespace
-            import re
-            filtered_lines = []
-            for line in lines:
-                # Remove backspace characters first, then check if line has content
-                cleaned_line = line.replace('\b', '').replace('\x08', '')
-                if re.sub(r'\s+', '', cleaned_line):  # If line has non-whitespace content
-                    filtered_lines.append(line)
-            return filtered_lines
 
         def highlight_text_diff(a, b, color):
             # Normalize whitespace in input strings
@@ -99,26 +89,15 @@ def upload_files():
             # Join with a single space to ensure consistent spacing in the output
             return ' '.join(result)
 
-        lines1 = filter_empty_lines(text1.splitlines())
-        lines2 = filter_empty_lines(text2.splitlines())
-        max_lines = max(len(lines1), len(lines2))
-        highlighted1 = []
-        highlighted2 = []
-        has_diff = False
-        
-        for i in range(max_lines):
-            l1 = lines1[i] if i < len(lines1) else ''
-            l2 = lines2[i] if i < len(lines2) else ''
-            h1 = highlight_text_diff(l1, l2, 'red')
-            h2 = highlight_text_diff(l1, l2, 'green')
-            if h1 != l1 or h2 != l2:
-                has_diff = True
-            highlighted1.append(h1)
-            highlighted2.append(h2)
+        # Instead of line-by-line comparison, compare entire texts as single blocks
+        # This allows multi-line sentences to be compared properly
+        h1 = highlight_text_diff(text1, text2, 'red')
+        h2 = highlight_text_diff(text1, text2, 'green')
+        has_diff = (h1 != text1 or h2 != text2)
 
         # Prepare the comparison result HTML
-        highlighted1_html = '\n'.join(highlighted1)
-        highlighted2_html = '\n'.join(highlighted2)
+        highlighted1_html = h1
+        highlighted2_html = h2
         
         compare_html = f'''<div class="comparison-result">
             <div class="row">
@@ -178,16 +157,6 @@ def compare():
         normalized = re.sub(r'\s+', ' ', text_no_slash).strip()
         return normalized
     
-    def filter_empty_lines(lines):
-        # Remove empty lines and lines with only whitespace
-        import re
-        filtered_lines = []
-        for line in lines:
-            # Remove backspace characters first, then check if line has content
-            cleaned_line = line.replace('\b', '').replace('\x08', '')
-            if re.sub(r'\s+', '', cleaned_line):  # If line has non-whitespace content
-                filtered_lines.append(line)
-        return filtered_lines
     
     def highlight_text_diff(a, b, color):
         # Normalize text for comparison
@@ -225,25 +194,15 @@ def compare():
                         result.append(f'<span style="background:#d4edda;color:#155724;">{word}</span>')
         return ' '.join(result)
 
-    lines1 = filter_empty_lines(text1.splitlines())
-    lines2 = filter_empty_lines(text2.splitlines())
-    max_lines = max(len(lines1), len(lines2))
-    highlighted1 = []
-    highlighted2 = []
-    has_diff = False
-    for i in range(max_lines):
-        l1 = lines1[i] if i < len(lines1) else ''
-        l2 = lines2[i] if i < len(lines2) else ''
-        h1 = highlight_text_diff(l1, l2, 'red')  # First text: highlight what's in text1 but not in text2
-        h2 = highlight_text_diff(l1, l2, 'green')  # Second text: highlight what's in text2 but not in text1
-        if h1 != l1 or h2 != l2:
-            has_diff = True
-        highlighted1.append(h1)
-        highlighted2.append(h2)
+    # Instead of line-by-line comparison, compare entire texts as single blocks
+    # This allows multi-line sentences to be compared properly
+    h1 = highlight_text_diff(text1, text2, 'red')  # First text: highlight what's in text1 but not in text2
+    h2 = highlight_text_diff(text1, text2, 'green')  # Second text: highlight what's in text2 but not in text1
+    has_diff = (h1 != text1 or h2 != text2)
 
     # Prepare the comparison result HTML
-    highlighted1_html = '\n'.join(highlighted1)
-    highlighted2_html = '\n'.join(highlighted2)
+    highlighted1_html = h1
+    highlighted2_html = h2
     
     compare_html = f'''<div class="comparison-result">
         <div class="row">
