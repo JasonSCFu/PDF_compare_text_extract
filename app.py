@@ -44,7 +44,7 @@ def upload_files():
         
 
         def highlight_text_diff(a, b, color):
-            # Normalize whitespace in input strings
+            # Normalize whitespace in input strings for comparison
             a_normalized = normalize_whitespace(a)
             b_normalized = normalize_whitespace(b)
 
@@ -55,39 +55,86 @@ def upload_files():
             # Create a matcher that ignores whitespace
             matcher = difflib.SequenceMatcher(lambda x: x == ' ', a_words, b_words, autojunk=False)
 
-            # For the original text (to preserve formatting in display), also remove slash content
+            # For display, preserve original formatting but remove slash content
             import re
-            a_clean = re.sub(r'/[^/]*/', '', a.replace('\b', '').replace('\x08', ''), flags=re.DOTALL)
-            b_clean = re.sub(r'/[^/]*/', '', b.replace('\b', '').replace('\x08', ''), flags=re.DOTALL)
-            a_original = a_clean.split()
-            b_original = b_clean.split()
-            
+            text_to_display = a if color == 'red' else b
+            display_text = re.sub(r'/[^/]*/', '', text_to_display.replace('\b', '').replace('\x08', ''), flags=re.DOTALL)
+
+            # If texts are identical after normalization, return original formatting
+            if a_normalized == b_normalized:
+                return display_text
+
+            # Split display text into words while preserving positions
+            display_words = []
+            word_positions = []
+            current_pos = 0
+
+            # Find word positions in the display text
+            for word in re.finditer(r'\S+', display_text):
+                display_words.append(word.group())
+                word_positions.append((word.start(), word.end()))
+
+            # Create result by reconstructing text with highlights
             result = []
-            
+            last_end = 0
+            word_index = 0
+
             # Process each opcode from the matcher
             for opcode, i1, i2, j1, j2 in matcher.get_opcodes():
                 if opcode == 'equal':
-                    # For equal parts, use the original text (not normalized)
-                    words = a_original[i1:i2] if color == 'red' else b_original[j1:j2]
-                    result.extend(words)
-                elif opcode == 'delete' and color == 'red':
-                    # Highlight deletions in red
-                    for word in a_original[i1:i2]:
-                        result.append(f'<span style="background:#f8d7da;color:#721c24;">{word}</span>')
-                elif opcode == 'insert' and color == 'green':
-                    # Highlight insertions in green
-                    for word in b_original[j1:j2]:
-                        result.append(f'<span style="background:#d4edda;color:#155724;">{word}</span>')
+                    # Add words without highlighting, preserving original spacing
+                    target_words = i2 - i1 if color == 'red' else j2 - j1
+                    for _ in range(target_words):
+                        if word_index < len(word_positions):
+                            start, end = word_positions[word_index]
+                            # Add any whitespace/formatting before this word
+                            result.append(display_text[last_end:start])
+                            # Add the word itself
+                            result.append(display_words[word_index])
+                            last_end = end
+                            word_index += 1
+
+                elif (opcode == 'delete' and color == 'red') or (opcode == 'insert' and color == 'green'):
+                    # Highlight differences
+                    target_words = i2 - i1 if color == 'red' else j2 - j1
+                    highlight_color = '#f8d7da' if color == 'red' else '#d4edda'
+                    text_color = '#721c24' if color == 'red' else '#155724'
+
+                    for _ in range(target_words):
+                        if word_index < len(word_positions):
+                            start, end = word_positions[word_index]
+                            # Add any whitespace/formatting before this word
+                            result.append(display_text[last_end:start])
+                            # Add the highlighted word
+                            result.append(f'<span style="background:{highlight_color};color:{text_color};">{display_words[word_index]}</span>')
+                            last_end = end
+                            word_index += 1
+
                 elif opcode == 'replace':
                     if color == 'red':
-                        for word in a_original[i1:i2]:
-                            result.append(f'<span style="background:#f8d7da;color:#721c24;">{word}</span>')
+                        # Highlight deleted words in red
+                        for _ in range(i2 - i1):
+                            if word_index < len(word_positions):
+                                start, end = word_positions[word_index]
+                                result.append(display_text[last_end:start])
+                                result.append(f'<span style="background:#f8d7da;color:#721c24;">{display_words[word_index]}</span>')
+                                last_end = end
+                                word_index += 1
                     elif color == 'green':
-                        for word in b_original[j1:j2]:
-                            result.append(f'<span style="background:#d4edda;color:#155724;">{word}</span>')
-            
-            # Join with a single space to ensure consistent spacing in the output
-            return ' '.join(result)
+                        # Highlight inserted words in green
+                        for _ in range(j2 - j1):
+                            if word_index < len(word_positions):
+                                start, end = word_positions[word_index]
+                                result.append(display_text[last_end:start])
+                                result.append(f'<span style="background:#d4edda;color:#155724;">{display_words[word_index]}</span>')
+                                last_end = end
+                                word_index += 1
+
+            # Add any remaining text after the last word
+            if last_end < len(display_text):
+                result.append(display_text[last_end:])
+
+            return ''.join(result)
 
         # Instead of line-by-line comparison, compare entire texts as single blocks
         # This allows multi-line sentences to be compared properly
@@ -162,37 +209,93 @@ def compare():
         # Normalize text for comparison
         a_normalized = normalize_text_for_comparison(a)
         b_normalized = normalize_text_for_comparison(b)
-        matcher = difflib.SequenceMatcher(None, a_normalized.split(), b_normalized.split())
 
-        # For the original text (to preserve formatting in display), also remove slash content
+        # Split into words for comparison
+        a_words = a_normalized.split()
+        b_words = b_normalized.split()
+
+        # Create a matcher that ignores whitespace
+        matcher = difflib.SequenceMatcher(lambda x: x == ' ', a_words, b_words, autojunk=False)
+
+        # For display, preserve original formatting but remove slash content
         import re
-        a_clean = re.sub(r'/[^/]*/', '', a.replace('\b', '').replace('\x08', ''), flags=re.DOTALL)
-        b_clean = re.sub(r'/[^/]*/', '', b.replace('\b', '').replace('\x08', ''), flags=re.DOTALL)
+        text_to_display = a if color == 'red' else b
+        display_text = re.sub(r'/[^/]*/', '', text_to_display.replace('\b', '').replace('\x08', ''), flags=re.DOTALL)
 
+        # If texts are identical after normalization, return original formatting
+        if a_normalized == b_normalized:
+            return display_text
+
+        # Split display text into words while preserving positions
+        display_words = []
+        word_positions = []
+
+        # Find word positions in the display text
+        for word in re.finditer(r'\S+', display_text):
+            display_words.append(word.group())
+            word_positions.append((word.start(), word.end()))
+
+        # Create result by reconstructing text with highlights
         result = []
+        last_end = 0
+        word_index = 0
+
+        # Process each opcode from the matcher
         for opcode, i1, i2, j1, j2 in matcher.get_opcodes():
             if opcode == 'equal':
-                # For 'equal' opcode, show the words from the cleaned text being processed
-                words = a_clean.split()[i1:i2] if color == 'red' else b_clean.split()[j1:j2]
-                result.extend(words)
-            elif opcode == 'delete' and color == 'red':
-                # Highlight deletions in red (for first text)
-                for word in a_clean.split()[i1:i2]:
-                    result.append(f'<span style="background:#f8d7da;color:#721c24;">{word}</span>')
-            elif opcode == 'insert' and color == 'green':
-                # Highlight insertions in green (for second text)
-                for word in b_clean.split()[j1:j2]:
-                    result.append(f'<span style="background:#d4edda;color:#155724;">{word}</span>')
+                # Add words without highlighting, preserving original spacing
+                target_words = i2 - i1 if color == 'red' else j2 - j1
+                for _ in range(target_words):
+                    if word_index < len(word_positions):
+                        start, end = word_positions[word_index]
+                        # Add any whitespace/formatting before this word
+                        result.append(display_text[last_end:start])
+                        # Add the word itself
+                        result.append(display_words[word_index])
+                        last_end = end
+                        word_index += 1
+
+            elif (opcode == 'delete' and color == 'red') or (opcode == 'insert' and color == 'green'):
+                # Highlight differences
+                target_words = i2 - i1 if color == 'red' else j2 - j1
+                highlight_color = '#f8d7da' if color == 'red' else '#d4edda'
+                text_color = '#721c24' if color == 'red' else '#155724'
+
+                for _ in range(target_words):
+                    if word_index < len(word_positions):
+                        start, end = word_positions[word_index]
+                        # Add any whitespace/formatting before this word
+                        result.append(display_text[last_end:start])
+                        # Add the highlighted word
+                        result.append(f'<span style="background:{highlight_color};color:{text_color};">{display_words[word_index]}</span>')
+                        last_end = end
+                        word_index += 1
+
             elif opcode == 'replace':
                 if color == 'red':
-                    # For first text, show replaced/deleted words in red
-                    for word in a_clean.split()[i1:i2]:
-                        result.append(f'<span style="background:#f8d7da;color:#721c24;">{word}</span>')
+                    # Highlight deleted words in red
+                    for _ in range(i2 - i1):
+                        if word_index < len(word_positions):
+                            start, end = word_positions[word_index]
+                            result.append(display_text[last_end:start])
+                            result.append(f'<span style="background:#f8d7da;color:#721c24;">{display_words[word_index]}</span>')
+                            last_end = end
+                            word_index += 1
                 elif color == 'green':
-                    # For second text, show new words in green
-                    for word in b_clean.split()[j1:j2]:
-                        result.append(f'<span style="background:#d4edda;color:#155724;">{word}</span>')
-        return ' '.join(result)
+                    # Highlight inserted words in green
+                    for _ in range(j2 - j1):
+                        if word_index < len(word_positions):
+                            start, end = word_positions[word_index]
+                            result.append(display_text[last_end:start])
+                            result.append(f'<span style="background:#d4edda;color:#155724;">{display_words[word_index]}</span>')
+                            last_end = end
+                            word_index += 1
+
+        # Add any remaining text after the last word
+        if last_end < len(display_text):
+            result.append(display_text[last_end:])
+
+        return ''.join(result)
 
     # Instead of line-by-line comparison, compare entire texts as single blocks
     # This allows multi-line sentences to be compared properly
